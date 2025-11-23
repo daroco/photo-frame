@@ -1,0 +1,405 @@
+.App {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.App-header {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 20px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.App-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.5em;
+  font-weight: 600;
+}
+
+.mode-indicator {
+  font-size: 1.1em;
+  opacity: 0.9;
+}
+
+.mode-indicator strong {
+  color: #ffd700;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tabs button {
+  padding: 12px 30px;
+  font-size: 1em;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tabs button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.tabs button.active {
+  background-color: white;
+  color: #667eea;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.content {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Frame Layout Editor */
+.layout-editor {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.layout-controls {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.overlay-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.overlay-controls label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.overlay-controls input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.overlay-controls select {
+  padding: 8px 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+.layout-canvas {
+  position: relative;
+  background: #f0f0f0;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  min-height: 600px;
+  overflow: hidden;
+}
+
+.frame-box {
+  position: absolute;
+  border: 3px solid #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  cursor: move;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px;
+}
+
+.frame-box:hover {
+  border-color: #764ba2;
+  background: rgba(118, 75, 162, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.frame-box.selected {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.2);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.frame-box .frame-name {
+  font-weight: bold;
+  font-size: 1em;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.frame-box .frame-status {
+  font-size: 0.85em;
+  padding: 4px 8px;
+  border-radius: 12px;
+  margin-bottom: 5px;
+}
+
+.frame-box .frame-status.online {
+  background: #4caf50;
+  color: white;
+}
+
+.frame-box .frame-status.offline {
+  background: #f44336;
+  color: white;
+}
+
+.frame-box .frame-dimensions {
+  font-size: 0.8em;
+  color: #666;
+}
+
+/* Frame List */
+.frame-list {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.frame-list h2 {
+  margin-top: 0;
+  color: #333;
+}
+
+.frame-item {
+  padding: 15px;
+  margin-bottom: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.frame-item:hover {
+  background: #e9ecef;
+  transform: translateX(5px);
+}
+
+.frame-info h3 {
+  margin: 0 0 5px 0;
+  color: #667eea;
+}
+
+.frame-info p {
+  margin: 3px 0;
+  color: #666;
+  font-size: 0.95em;
+}
+
+.frame-actions button {
+  padding: 8px 16px;
+  margin-left: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.frame-actions button.delete {
+  background: #f44336;
+  color: white;
+}
+
+.frame-actions button.delete:hover {
+  background: #d32f2f;
+}
+
+/* Photo Gallery */
+.photo-gallery {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.photo-gallery h2 {
+  margin-top: 0;
+  color: #333;
+}
+
+.upload-zone {
+  border: 3px dashed #667eea;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin-bottom: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.upload-zone:hover {
+  border-color: #764ba2;
+  background: #e9ecef;
+}
+
+.upload-zone.active {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #764ba2;
+}
+
+.upload-zone p {
+  margin: 10px 0;
+  color: #666;
+  font-size: 1.1em;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.photo-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.photo-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.photo-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.photo-card-info {
+  padding: 15px;
+}
+
+.photo-card-info h3 {
+  margin: 0 0 10px 0;
+  font-size: 0.95em;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-card-actions button,
+.photo-card-actions select {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.photo-card-actions button.assign {
+  background: #667eea;
+  color: white;
+  flex: 1;
+}
+
+.photo-card-actions button.assign:hover {
+  background: #5568d3;
+}
+
+.photo-card-actions button.overlay {
+  background: #4caf50;
+  color: white;
+  flex: 1;
+}
+
+.photo-card-actions button.overlay:hover {
+  background: #45a049;
+}
+
+.photo-card-actions button.delete {
+  background: #f44336;
+  color: white;
+}
+
+.photo-card-actions button.delete:hover {
+  background: #d32f2f;
+}
+
+.photo-card-actions select {
+  border: 2px solid #ddd;
+  background: white;
+  flex: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.empty-state h3 {
+  margin: 0 0 10px 0;
+  color: #666;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .App-header h1 {
+    font-size: 1.8em;
+  }
+
+  .tabs {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .tabs button {
+    width: 100%;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .frame-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .frame-actions {
+    margin-top: 10px;
+    width: 100%;
+  }
+
+  .frame-actions button {
+    margin-left: 0;
+    margin-right: 10px;
+  }
+}
