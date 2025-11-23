@@ -8,13 +8,30 @@ const { v4: uuidv4 } = require('uuid');
 const WebSocket = require('ws');
 const http = require('http');
 const sqlite3 = require('sqlite3').verbose();
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Rate limiting middleware
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit uploads
+  message: 'Too many uploads from this IP, please try again later.',
+});
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use('/api', apiLimiter); // Apply rate limiting to API routes
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/photos', express.static(path.join(__dirname, 'photos')));
 
@@ -283,7 +300,7 @@ app.delete('/api/frames/:id', (req, res) => {
 });
 
 // Upload photo
-app.post('/api/photos/upload', upload.single('photo'), (req, res) => {
+app.post('/api/photos/upload', uploadLimiter, upload.single('photo'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }

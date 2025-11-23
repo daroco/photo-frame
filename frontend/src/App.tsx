@@ -78,8 +78,6 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-
-
   const loadFrames = async () => {
     try {
       const response = await axios.get(`${API_URL}/frames`);
