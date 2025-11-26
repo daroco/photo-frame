@@ -369,6 +369,304 @@
   color: #666;
 }
 
+/* Google Photos Integration */
+.google-photos {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.google-photos h2 {
+  margin-top: 0;
+  color: #333;
+}
+
+.google-photos h3 {
+  color: #667eea;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.google-photos .loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.google-photos .error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.google-photos .error-message button {
+  background: none;
+  border: none;
+  color: #c62828;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.google-photos .success-message {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.google-photos .success-message button {
+  background: none;
+  border: none;
+  color: #2e7d32;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.google-photos .setup-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.google-photos .setup-section ol {
+  margin: 15px 0;
+  padding-left: 20px;
+}
+
+.google-photos .setup-section li {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.google-photos .setup-section code {
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.google-photos .setup-section ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.google-photos .auth-section {
+  text-align: center;
+  padding: 40px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.google-photos .auth-section p {
+  margin: 0 0 20px 0;
+  color: #666;
+}
+
+.google-photos .connect-button {
+  background: #4285f4;
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 1.1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.google-photos .connect-button:hover {
+  background: #3367d6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4);
+}
+
+.google-photos .connected-section {
+  margin-bottom: 20px;
+}
+
+.google-photos .status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #e8f5e9;
+  border-radius: 8px;
+}
+
+.google-photos .status-indicator {
+  font-weight: 500;
+}
+
+.google-photos .status-indicator.connected {
+  color: #2e7d32;
+}
+
+.google-photos .disconnect-button {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.google-photos .disconnect-button:hover {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #ffcdd2;
+}
+
+.google-photos .slideshow-section,
+.google-photos .playback-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.google-photos .form-group {
+  margin-bottom: 20px;
+}
+
+.google-photos .form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.google-photos .form-group .toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.google-photos .form-group .toggle-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.google-photos .form-group select,
+.google-photos .form-group input[type="number"] {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1em;
+  transition: border-color 0.2s ease;
+}
+
+.google-photos .form-group select:focus,
+.google-photos .form-group input[type="number"]:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.google-photos .form-group select:disabled,
+.google-photos .form-group input[type="number"]:disabled {
+  background: #e9ecef;
+  cursor: not-allowed;
+}
+
+.google-photos .form-group .help-text {
+  margin: 8px 0 0 0;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.google-photos .refresh-albums-button {
+  margin-top: 10px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.google-photos .refresh-albums-button:hover:not(:disabled) {
+  background: #e9ecef;
+}
+
+.google-photos .refresh-albums-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-photos .button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.google-photos .save-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.google-photos .save-button:hover:not(:disabled) {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.google-photos .save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.google-photos .playback-info {
+  margin-bottom: 15px;
+}
+
+.google-photos .playback-info p {
+  margin: 5px 0;
+  color: #555;
+}
+
+.google-photos .next-button,
+.google-photos .refresh-button {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: all 0.2s ease;
+}
+
+.google-photos .next-button:hover,
+.google-photos .refresh-button:hover {
+  background: #e9ecef;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .App-header h1 {
@@ -401,5 +699,11 @@
   .frame-actions button {
     margin-left: 0;
     margin-right: 10px;
+  }
+
+  .google-photos .status-bar {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
   }
 }

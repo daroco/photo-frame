@@ -13,6 +13,7 @@ A complete solution for managing digital photo frames with a web UI, automatic f
 - 📡 **Real-time Updates** - Changes sync instantly via WebSocket
 - 🌐 **WiFi-enabled** - Works with ESP32 or similar WiFi-capable microcontrollers
 - 📊 **Frame Status Monitoring** - Track online/offline status and last seen timestamps
+- 📷 **Google Photos Integration** - Connect to Google Photos albums for automatic slideshow with panoramic display
 
 ## Architecture
 
@@ -140,6 +141,22 @@ A single large image is stretched across all frames, with each frame displaying 
 - `GET /api/overlay` - Get overlay configuration
 - `POST /api/overlay` - Set overlay mode and photo
 
+### Google Photos Endpoints
+
+- `GET /api/google/status` - Get Google authentication status
+- `GET /api/google/auth-url` - Get Google OAuth URL to initiate authentication
+- `GET /api/google/callback` - OAuth callback endpoint (redirects to frontend)
+- `POST /api/google/disconnect` - Disconnect Google account
+- `GET /api/google/albums` - List Google Photos albums
+
+### Slideshow Endpoints
+
+- `GET /api/slideshow` - Get slideshow configuration
+- `POST /api/slideshow` - Update slideshow settings
+- `GET /api/slideshow/current` - Get current slideshow photo
+- `POST /api/slideshow/next` - Advance to next photo
+- `POST /api/slideshow/refresh` - Clear photo cache
+
 ### WebSocket Events
 
 Clients can connect to `ws://server:3001` and receive:
@@ -148,6 +165,8 @@ Clients can connect to `ws://server:3001` and receive:
 - `layout_updated` - Frame positions changed
 - `photo_updated` - Photo assigned to frame
 - `mode_changed` - Switched between individual/overlay
+- `slideshow_updated` - Slideshow settings changed
+- `slideshow_photo` - New photo from Google Photos slideshow
 
 ## Hardware Setup
 
@@ -193,6 +212,9 @@ Edit your TFT_eSPI User_Setup.h:
 Backend (.env):
 ```
 PORT=3001
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3001/api/google/callback
 ```
 
 Frontend (.env):
@@ -200,6 +222,19 @@ Frontend (.env):
 REACT_APP_API_URL=http://localhost:3001/api
 REACT_APP_WS_URL=ws://localhost:3001
 ```
+
+### Google Photos Setup
+
+To enable Google Photos integration:
+
+1. Go to the [Google Cloud Console](https://console.developers.google.com/)
+2. Create a new project or select an existing one
+3. Enable the **Photos Library API**
+4. Go to Credentials and create OAuth 2.0 credentials (Web application type)
+5. Add the redirect URI: `http://localhost:3001/api/google/callback` (or your production URL)
+6. Set the environment variables `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+7. Restart the backend server
+8. In the web UI, go to the "Google Photos" tab and connect your account
 
 ## Project Structure
 
@@ -217,7 +252,8 @@ photo-frame/
 │   │   └── components/
 │   │       ├── FrameLayoutEditor.tsx
 │   │       ├── FrameList.tsx
-│   │       └── PhotoGallery.tsx
+│   │       ├── PhotoGallery.tsx
+│   │       └── GooglePhotos.tsx
 │   └── package.json
 └── frame-client/        # Arduino/ESP32 client
     └── frame-client.ino
@@ -276,7 +312,7 @@ Contributions welcome! Please open an issue or PR.
 
 ## Future Enhancements
 
-- [ ] Photo rotation/slideshow mode
+- [x] Photo rotation/slideshow mode (via Google Photos integration)
 - [ ] Scheduling (different photos at different times)
 - [ ] Weather/clock widgets
 - [ ] Mobile app (React Native)
