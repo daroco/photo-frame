@@ -41,11 +41,20 @@ const GooglePhotos: React.FC = () => {
   const [albumsLoading, setAlbumsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Form state for editing
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>('');
   const [rotationInterval, setRotationInterval] = useState<number>(30);
   const [panoramicFrequency, setPanoramicFrequency] = useState<number>(5);
+
+  // Auto-clear success messages after 3 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
 
   const loadAuthStatus = useCallback(async () => {
     try {
@@ -163,7 +172,7 @@ const GooglePhotos: React.FC = () => {
       });
       
       await loadSlideshowConfig();
-      alert('Slideshow settings saved successfully!');
+      setSuccessMessage('Slideshow settings saved successfully!');
     } catch (err) {
       console.error('Error saving config:', err);
       setError('Failed to save slideshow settings');
@@ -215,7 +224,7 @@ const GooglePhotos: React.FC = () => {
   const handleRefreshCache = async () => {
     try {
       await axios.post(`${API_URL}/slideshow/refresh`);
-      alert('Photo cache cleared. New photos will be loaded on next rotation.');
+      setSuccessMessage('Photo cache cleared. New photos will be loaded on next rotation.');
     } catch (err) {
       console.error('Error refreshing cache:', err);
       setError('Failed to refresh photo cache');
@@ -241,6 +250,13 @@ const GooglePhotos: React.FC = () => {
         <div className="error-message">
           {error}
           <button onClick={() => setError(null)}>×</button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="success-message">
+          {successMessage}
+          <button onClick={() => setSuccessMessage(null)}>×</button>
         </div>
       )}
 

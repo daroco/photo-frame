@@ -581,6 +581,10 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/google/callback';
 
+// Default image dimensions for Google Photos URLs
+const DEFAULT_PHOTO_WIDTH = 1920;
+const DEFAULT_PHOTO_HEIGHT = 1080;
+
 function getOAuth2Client() {
   return new google.auth.OAuth2(
     GOOGLE_CLIENT_ID,
@@ -990,7 +994,7 @@ async function triggerSlideshowRotation() {
         
         // Create a Google Photos URL with appropriate size parameters
         // Google Photos API allows appending =w{width}-h{height} for sizing
-        const photoUrl = `${photo.baseUrl}=w1920-h1080`;
+        const photoUrl = `${photo.baseUrl}=w${DEFAULT_PHOTO_WIDTH}-h${DEFAULT_PHOTO_HEIGHT}`;
         
         // Update overlay configuration
         if (useOverlayMode) {
@@ -1090,7 +1094,7 @@ app.get('/api/slideshow/current', async (req, res) => {
     const forcePanoramic = (currentIndex + 1) % config.panoramic_frequency === 0;
     const useOverlayMode = isPanoramic || forcePanoramic;
     
-    const photoUrl = `${photo.baseUrl}=w1920-h1080`;
+    const photoUrl = `${photo.baseUrl}=w${DEFAULT_PHOTO_WIDTH}-h${DEFAULT_PHOTO_HEIGHT}`;
     
     res.json({
       active: true,
