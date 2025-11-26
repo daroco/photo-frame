@@ -4,6 +4,7 @@ import './App.css';
 import FrameLayoutEditor from './components/FrameLayoutEditor';
 import PhotoGallery from './components/PhotoGallery';
 import FrameList from './components/FrameList';
+import GooglePhotos from './components/GooglePhotos';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:3001';
@@ -34,7 +35,7 @@ function App() {
   const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
   const [overlayMode, setOverlayMode] = useState(false);
   const [overlayPhoto, setOverlayPhoto] = useState<Photo | null>(null);
-  const [activeTab, setActiveTab] = useState<'layout' | 'frames' | 'photos'>('layout');
+  const [activeTab, setActiveTab] = useState<'layout' | 'frames' | 'photos' | 'google'>('layout');
   const [, setWs] = useState<WebSocket | null>(null);
 
   // Load data on mount
@@ -217,6 +218,12 @@ function App() {
         >
           Photos ({photos.length})
         </button>
+        <button
+          className={activeTab === 'google' ? 'active' : ''}
+          onClick={() => setActiveTab('google')}
+        >
+          Google Photos
+        </button>
       </div>
 
       <div className="content">
@@ -252,6 +259,10 @@ function App() {
             onAssignPhoto={handleAssignPhoto}
             onSetOverlayPhoto={(photoId) => handleToggleOverlayMode(true, photoId)}
           />
+        )}
+
+        {activeTab === 'google' && (
+          <GooglePhotos />
         )}
       </div>
     </div>

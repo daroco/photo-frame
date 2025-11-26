@@ -9,6 +9,7 @@ const WebSocket = require('ws');
 const http = require('http');
 const sqlite3 = require('sqlite3').verbose();
 const rateLimit = require('express-rate-limit');
+const { google } = require('googleapis');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -113,6 +114,38 @@ function initDatabase() {
       // Insert default overlay config if doesn't exist
       db.run(`INSERT OR IGNORE INTO overlay_config (id, enabled) VALUES (1, 0)`, (err) => {
         if (err) console.error('Error inserting default overlay config:', err);
+      });
+    }
+  });
+
+  // Google Photos OAuth tokens table
+  db.run(`CREATE TABLE IF NOT EXISTS google_auth (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    access_token TEXT,
+    refresh_token TEXT,
+    expiry_date INTEGER,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) console.error('Error creating google_auth table:', err);
+  });
+
+  // Google Photos slideshow configuration table
+  db.run(`CREATE TABLE IF NOT EXISTS slideshow_config (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    enabled INTEGER DEFAULT 0,
+    album_id TEXT,
+    album_title TEXT,
+    rotation_interval INTEGER DEFAULT 30,
+    panoramic_frequency INTEGER DEFAULT 5,
+    current_index INTEGER DEFAULT 0,
+    last_rotation DATETIME,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) console.error('Error creating slideshow_config table:', err);
+    else {
+      // Insert default slideshow config if doesn't exist
+      db.run(`INSERT OR IGNORE INTO slideshow_config (id, enabled, rotation_interval, panoramic_frequency) VALUES (1, 0, 30, 5)`, (err) => {
+        if (err) console.error('Error inserting default slideshow config:', err);
       });
     }
   });
@@ -538,6 +571,570 @@ app.post('/api/overlay', (req, res) => {
     }
   );
 });
+
+// =====================
+// Google Photos Integration
+// =====================
+
+// Google OAuth2 configuration
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/google/callback';
+
+function getOAuth2Client() {
+  return new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI
+  );
+}
+
+// Helper to get authenticated OAuth2 client from stored tokens
+function getAuthenticatedClient() {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM google_auth WHERE id = 1', [], (err, row) => {
+      if (err) {
+        return reject(new Error('Database error'));
+      }
+      if (!row || !row.refresh_token) {
+        return reject(new Error('Not authenticated with Google'));
+      }
+      
+      const oauth2Client = getOAuth2Client();
+      oauth2Client.setCredentials({
+        access_token: row.access_token,
+        refresh_token: row.refresh_token,
+        expiry_date: row.expiry_date
+      });
+      
+      // Handle token refresh
+      oauth2Client.on('tokens', (tokens) => {
+        const updateFields = ['access_token = ?'];
+        const updateValues = [tokens.access_token];
+        
+        if (tokens.refresh_token) {
+          updateFields.push('refresh_token = ?');
+          updateValues.push(tokens.refresh_token);
+        }
+        if (tokens.expiry_date) {
+          updateFields.push('expiry_date = ?');
+          updateValues.push(tokens.expiry_date);
+        }
+        updateFields.push('updated_at = CURRENT_TIMESTAMP');
+        
+        db.run(
+          `UPDATE google_auth SET ${updateFields.join(', ')} WHERE id = 1`,
+          updateValues
+        );
+      });
+      
+      resolve(oauth2Client);
+    });
+  });
+}
+
+// Get Google auth status
+app.get('/api/google/status', (req, res) => {
+  db.get('SELECT * FROM google_auth WHERE id = 1', [], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    const isConfigured = !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+    const isAuthenticated = !!(row && row.refresh_token);
+    
+    res.json({
+      configured: isConfigured,
+      authenticated: isAuthenticated
+    });
+  });
+});
+
+// Get Google OAuth URL
+app.get('/api/google/auth-url', (req, res) => {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return res.status(400).json({ 
+      error: 'Google OAuth is not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.' 
+    });
+  }
+  
+  const oauth2Client = getOAuth2Client();
+  const scopes = [
+    'https://www.googleapis.com/auth/photoslibrary.readonly'
+  ];
+  
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: scopes,
+    prompt: 'consent'
+  });
+  
+  res.json({ url: authUrl });
+});
+
+// Google OAuth callback
+app.get('/api/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+  
+  if (error) {
+    return res.redirect('/?google_auth=error&message=' + encodeURIComponent(error));
+  }
+  
+  if (!code) {
+    return res.redirect('/?google_auth=error&message=No+authorization+code');
+  }
+  
+  try {
+    const oauth2Client = getOAuth2Client();
+    const { tokens } = await oauth2Client.getToken(code);
+    
+    // Store tokens in database
+    db.run(
+      `INSERT OR REPLACE INTO google_auth (id, access_token, refresh_token, expiry_date, updated_at) 
+       VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [tokens.access_token, tokens.refresh_token, tokens.expiry_date],
+      (err) => {
+        if (err) {
+          console.error('Error storing Google tokens:', err);
+          return res.redirect('/?google_auth=error&message=Failed+to+store+credentials');
+        }
+        
+        // Redirect to frontend with success message
+        res.redirect('/?google_auth=success');
+      }
+    );
+  } catch (err) {
+    console.error('Error exchanging Google auth code:', err);
+    res.redirect('/?google_auth=error&message=' + encodeURIComponent(err.message));
+  }
+});
+
+// Disconnect Google account
+app.post('/api/google/disconnect', (req, res) => {
+  db.run('DELETE FROM google_auth WHERE id = 1', [], (err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to disconnect Google account' });
+    }
+    
+    // Also disable slideshow if it was using Google Photos
+    db.run('UPDATE slideshow_config SET enabled = 0, album_id = NULL, album_title = NULL WHERE id = 1', [], (err) => {
+      if (err) {
+        console.error('Error disabling slideshow:', err);
+      }
+    });
+    
+    res.json({ success: true });
+  });
+});
+
+// List Google Photos albums
+app.get('/api/google/albums', async (req, res) => {
+  try {
+    const oauth2Client = await getAuthenticatedClient();
+    
+    // Use the Photos Library API directly since googleapis doesn't have a built-in library
+    const response = await oauth2Client.request({
+      url: 'https://photoslibrary.googleapis.com/v1/albums',
+      method: 'GET',
+      params: {
+        pageSize: 50
+      }
+    });
+    
+    const albums = (response.data.albums || []).map(album => ({
+      id: album.id,
+      title: album.title,
+      mediaItemsCount: album.mediaItemsCount || 0,
+      coverPhotoBaseUrl: album.coverPhotoBaseUrl
+    }));
+    
+    res.json({ albums });
+  } catch (err) {
+    console.error('Error fetching Google Photos albums:', err);
+    if (err.message === 'Not authenticated with Google') {
+      return res.status(401).json({ error: 'Not authenticated with Google' });
+    }
+    res.status(500).json({ error: 'Failed to fetch albums' });
+  }
+});
+
+// Get photos from a specific album
+app.get('/api/google/albums/:albumId/photos', async (req, res) => {
+  try {
+    const oauth2Client = await getAuthenticatedClient();
+    const { albumId } = req.params;
+    const pageToken = req.query.pageToken;
+    
+    const requestBody = {
+      albumId,
+      pageSize: 100
+    };
+    
+    if (pageToken) {
+      requestBody.pageToken = pageToken;
+    }
+    
+    const response = await oauth2Client.request({
+      url: 'https://photoslibrary.googleapis.com/v1/mediaItems:search',
+      method: 'POST',
+      data: requestBody
+    });
+    
+    const photos = (response.data.mediaItems || [])
+      .filter(item => item.mimeType && item.mimeType.startsWith('image/'))
+      .map(item => ({
+        id: item.id,
+        baseUrl: item.baseUrl,
+        filename: item.filename,
+        mimeType: item.mimeType,
+        width: item.mediaMetadata?.width,
+        height: item.mediaMetadata?.height
+      }));
+    
+    res.json({ 
+      photos,
+      nextPageToken: response.data.nextPageToken 
+    });
+  } catch (err) {
+    console.error('Error fetching album photos:', err);
+    if (err.message === 'Not authenticated with Google') {
+      return res.status(401).json({ error: 'Not authenticated with Google' });
+    }
+    res.status(500).json({ error: 'Failed to fetch photos' });
+  }
+});
+
+// =====================
+// Slideshow Configuration
+// =====================
+
+// Get slideshow configuration
+app.get('/api/slideshow', (req, res) => {
+  db.get('SELECT * FROM slideshow_config WHERE id = 1', [], (err, config) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to fetch slideshow config' });
+    }
+    
+    res.json({
+      enabled: config ? config.enabled === 1 : false,
+      albumId: config?.album_id || null,
+      albumTitle: config?.album_title || null,
+      rotationInterval: config?.rotation_interval || 30,
+      panoramicFrequency: config?.panoramic_frequency || 5,
+      currentIndex: config?.current_index || 0,
+      lastRotation: config?.last_rotation || null
+    });
+  });
+});
+
+// Update slideshow configuration
+app.post('/api/slideshow', async (req, res) => {
+  const { enabled, albumId, albumTitle, rotationInterval, panoramicFrequency } = req.body;
+  
+  // Validate inputs
+  if (enabled && !albumId) {
+    return res.status(400).json({ error: 'Album ID is required when enabling slideshow' });
+  }
+  
+  const interval = Math.max(10, Math.min(3600, rotationInterval || 30)); // 10 seconds to 1 hour
+  const frequency = Math.max(1, Math.min(20, panoramicFrequency || 5)); // Every 1-20 photos
+  
+  db.run(
+    `UPDATE slideshow_config SET 
+      enabled = ?, 
+      album_id = ?, 
+      album_title = ?,
+      rotation_interval = ?, 
+      panoramic_frequency = ?,
+      current_index = 0,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1`,
+    [enabled ? 1 : 0, albumId || null, albumTitle || null, interval, frequency],
+    (err) => {
+      if (err) {
+        console.error('Error updating slideshow config:', err);
+        return res.status(500).json({ error: 'Failed to update slideshow config' });
+      }
+      
+      res.json({ success: true });
+      
+      // Broadcast slideshow update to all connected clients
+      broadcastToFrames({
+        type: 'slideshow_updated',
+        enabled: enabled,
+        albumId: albumId
+      });
+      
+      // If enabled, trigger an immediate rotation
+      if (enabled) {
+        triggerSlideshowRotation();
+      }
+    }
+  );
+});
+
+// Store cached album photos for the slideshow
+let cachedAlbumPhotos = [];
+let cachedAlbumId = null;
+
+// Function to fetch all photos from the selected album
+async function fetchAlbumPhotos(albumId) {
+  if (cachedAlbumId === albumId && cachedAlbumPhotos.length > 0) {
+    return cachedAlbumPhotos;
+  }
+  
+  try {
+    const oauth2Client = await getAuthenticatedClient();
+    let allPhotos = [];
+    let pageToken = null;
+    
+    do {
+      const requestBody = {
+        albumId,
+        pageSize: 100
+      };
+      
+      if (pageToken) {
+        requestBody.pageToken = pageToken;
+      }
+      
+      const response = await oauth2Client.request({
+        url: 'https://photoslibrary.googleapis.com/v1/mediaItems:search',
+        method: 'POST',
+        data: requestBody
+      });
+      
+      const photos = (response.data.mediaItems || [])
+        .filter(item => item.mimeType && item.mimeType.startsWith('image/'))
+        .map(item => ({
+          id: item.id,
+          baseUrl: item.baseUrl,
+          filename: item.filename,
+          mimeType: item.mimeType,
+          width: parseInt(item.mediaMetadata?.width) || 0,
+          height: parseInt(item.mediaMetadata?.height) || 0
+        }));
+      
+      allPhotos = allPhotos.concat(photos);
+      pageToken = response.data.nextPageToken;
+    } while (pageToken);
+    
+    // Shuffle the photos for variety
+    allPhotos = shuffleArray(allPhotos);
+    
+    cachedAlbumPhotos = allPhotos;
+    cachedAlbumId = albumId;
+    
+    return allPhotos;
+  } catch (err) {
+    console.error('Error fetching album photos for slideshow:', err);
+    return [];
+  }
+}
+
+// Helper function to shuffle array
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Function to determine if a photo should be displayed as panoramic/overlay
+function isPanoramicPhoto(photo) {
+  // Consider a photo panoramic if its aspect ratio is > 2:1 (width is more than twice the height)
+  if (photo.width && photo.height) {
+    return photo.width / photo.height > 2;
+  }
+  return false;
+}
+
+// Function to trigger slideshow rotation
+async function triggerSlideshowRotation() {
+  return new Promise((resolve, reject) => {
+    db.get('SELECT * FROM slideshow_config WHERE id = 1', [], async (err, config) => {
+      if (err || !config || !config.enabled || !config.album_id) {
+        return resolve();
+      }
+      
+      try {
+        const photos = await fetchAlbumPhotos(config.album_id);
+        if (photos.length === 0) {
+          console.log('No photos found in album');
+          return resolve();
+        }
+        
+        let currentIndex = config.current_index || 0;
+        if (currentIndex >= photos.length) {
+          currentIndex = 0;
+          // Reshuffle when we've gone through all photos
+          cachedAlbumPhotos = shuffleArray(cachedAlbumPhotos);
+        }
+        
+        const photo = photos[currentIndex];
+        
+        // Determine if this should be panoramic/overlay mode
+        // Either if the photo is naturally panoramic, or if it's time for a forced panoramic display
+        const isPanoramic = isPanoramicPhoto(photo);
+        const forcePanoramic = (currentIndex + 1) % config.panoramic_frequency === 0;
+        const useOverlayMode = isPanoramic || forcePanoramic;
+        
+        // Update current index
+        const nextIndex = currentIndex + 1;
+        db.run(
+          'UPDATE slideshow_config SET current_index = ?, last_rotation = CURRENT_TIMESTAMP WHERE id = 1',
+          [nextIndex]
+        );
+        
+        // Create a Google Photos URL with appropriate size parameters
+        // Google Photos API allows appending =w{width}-h{height} for sizing
+        const photoUrl = `${photo.baseUrl}=w1920-h1080`;
+        
+        // Update overlay configuration
+        if (useOverlayMode) {
+          db.run(
+            'UPDATE overlay_config SET enabled = 1, photo_id = NULL WHERE id = 1'
+          );
+        } else {
+          db.run(
+            'UPDATE overlay_config SET enabled = 0, photo_id = NULL WHERE id = 1'
+          );
+        }
+        
+        // Broadcast the new photo to all frames
+        broadcastToFrames({
+          type: 'slideshow_photo',
+          photo: {
+            id: photo.id,
+            url: photoUrl,
+            filename: photo.filename,
+            width: photo.width,
+            height: photo.height,
+            isExternal: true
+          },
+          mode: useOverlayMode ? 'overlay' : 'individual',
+          isPanoramic: isPanoramic,
+          forcedPanoramic: forcePanoramic && !isPanoramic
+        });
+        
+        console.log(`Slideshow: Displaying photo ${currentIndex + 1}/${photos.length} (${useOverlayMode ? 'overlay' : 'individual'} mode)`);
+        resolve();
+      } catch (err) {
+        console.error('Error in slideshow rotation:', err);
+        resolve();
+      }
+    });
+  });
+}
+
+// Slideshow rotation interval
+let slideshowInterval = null;
+
+function startSlideshowInterval() {
+  if (slideshowInterval) {
+    clearInterval(slideshowInterval);
+  }
+  
+  db.get('SELECT * FROM slideshow_config WHERE id = 1', [], (err, config) => {
+    if (err || !config || !config.enabled) {
+      return;
+    }
+    
+    const intervalMs = (config.rotation_interval || 30) * 1000;
+    
+    slideshowInterval = setInterval(() => {
+      db.get('SELECT enabled FROM slideshow_config WHERE id = 1', [], (err, row) => {
+        if (err || !row || !row.enabled) {
+          if (slideshowInterval) {
+            clearInterval(slideshowInterval);
+            slideshowInterval = null;
+          }
+          return;
+        }
+        triggerSlideshowRotation();
+      });
+    }, intervalMs);
+    
+    console.log(`Slideshow interval started: ${config.rotation_interval} seconds`);
+  });
+}
+
+// Get current slideshow photo (for frames to fetch on connect)
+app.get('/api/slideshow/current', async (req, res) => {
+  try {
+    const config = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM slideshow_config WHERE id = 1', [], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+    
+    if (!config || !config.enabled || !config.album_id) {
+      return res.json({ active: false });
+    }
+    
+    const photos = await fetchAlbumPhotos(config.album_id);
+    if (photos.length === 0) {
+      return res.json({ active: false });
+    }
+    
+    let currentIndex = config.current_index || 0;
+    if (currentIndex >= photos.length) {
+      currentIndex = 0;
+    }
+    
+    const photo = photos[currentIndex];
+    const isPanoramic = isPanoramicPhoto(photo);
+    const forcePanoramic = (currentIndex + 1) % config.panoramic_frequency === 0;
+    const useOverlayMode = isPanoramic || forcePanoramic;
+    
+    const photoUrl = `${photo.baseUrl}=w1920-h1080`;
+    
+    res.json({
+      active: true,
+      photo: {
+        id: photo.id,
+        url: photoUrl,
+        filename: photo.filename,
+        width: photo.width,
+        height: photo.height,
+        isExternal: true
+      },
+      mode: useOverlayMode ? 'overlay' : 'individual',
+      isPanoramic: isPanoramic,
+      forcedPanoramic: forcePanoramic && !isPanoramic,
+      currentIndex: currentIndex,
+      totalPhotos: photos.length
+    });
+  } catch (err) {
+    console.error('Error getting current slideshow photo:', err);
+    res.status(500).json({ error: 'Failed to get current photo' });
+  }
+});
+
+// Manual trigger for next photo
+app.post('/api/slideshow/next', async (req, res) => {
+  try {
+    await triggerSlideshowRotation();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to advance slideshow' });
+  }
+});
+
+// Clear photo cache (useful when album contents change)
+app.post('/api/slideshow/refresh', (req, res) => {
+  cachedAlbumPhotos = [];
+  cachedAlbumId = null;
+  res.json({ success: true });
+});
+
+// Start slideshow interval on server startup
+setTimeout(() => {
+  startSlideshowInterval();
+}, 1000);
 
 // Health check
 app.get('/api/health', (req, res) => {
